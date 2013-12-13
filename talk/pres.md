@@ -38,7 +38,7 @@ Both run Node.js on the backend.
 ## ( **We** | **you** | **users** )
 ## **hate downtime.**
 
-![Downtime](/img/platform-downtime.png)
+![Downtime](img/platform-downtime.png)
 
 Note: Downtime is bad for all sorts of reasons.
 Users go away.
@@ -77,24 +77,24 @@ Note: Without further ado, here are the...
 
 ## Keys to 100% uptime.
 <br>
-![no downtime](/img/no-platform-downtime.jpg)
+![no downtime](img/no-platform-downtime.jpg)
 
 
 ## 1. Sensibly handle uncaught exceptions.
-![no downtime](/img/no-platform-downtime.jpg)
+![no downtime](img/no-platform-downtime.jpg)
 
 
 ## 2. Use domains to handle known errors.
-![no downtime](/img/no-platform-downtime.jpg)
+![no downtime](img/no-platform-downtime.jpg)
 
 
 ## 3. Manage processes
 ## with cluster.
-![no downtime](/img/no-platform-downtime.jpg)
+![no downtime](img/no-platform-downtime.jpg)
 
 
 ## 4. Gracefully terminate connections.
-![no downtime](/img/no-platform-downtime.jpg)
+![no downtime](img/no-platform-downtime.jpg)
 
 
 
@@ -602,7 +602,7 @@ time is up and the worker just has to go.
 ### Here it is:
 ## Our ideal server.
 
-![unicorn](/img/rainbow_unicorn.gif)
+![unicorn](img/rainbow_unicorn.gif)
 
 
 
