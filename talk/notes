@@ -1,0 +1,90 @@
+process.send, process.connected, NODE_CHANNEL_FD
+child_process:
+  // Add .send() method and start listening for IPC data
+  if (ipc !== undefined) setupChannel(this, ipc);
+
+
+
+
+http://sequelizejs.com/documentation might also not play well with
+process.domain: see: http://stackoverflow.com/a/16404594
+
+
+http://stackoverflow.com/questions/11599739/how-to-use-node-js-0-8-x-domains-with-express
+
+
+http://wiki.nginx.org/HttpProxyModule#proxy_next_upstream
+
+https://s3.amazonaws.com/superjoe/temp/naught.html
+
+
+
+# Real world example
+
+
+- Bursts of errors in application log
+- What is happening?
+
+
+### What happens when
+### a client makes a request
+### and the underlying tcp connection
+### is closed without a response?
+
+Note:
+- If errors aren't handled correctly, user agents may resend bad requests
+and cause even more trouble.
+
+
+The client will open a new connection and retry.
+
+This is in the HTTP spec.
+
+
+### Question 2
+## What do the Node docs say to do on an uncaught exception?
+
+
+Kill the process.
+
+
+So what happens when I POST a charge to /api/billing and something goes
+wrong and the server throws?
+
+
+If no other workers, maybe nothing happens -- maybe error while waiting for
+a new worker to come up.
+
+
+If using cluster, then
+- another POST! maybe repeating a charge, if that part went through? who knows!
+
+TODO: demo this
+
+
+No response is a big problem for clients, and for us
+- seems to hang, and some clients will resend the request multiple times,
+possibly triggering some error on more workers if you are using workers.
+
+
+
+If I had known the 4 keys to uptime
+
+
+http://debuggable.com/posts/node-js-dealing-with-uncaught-exceptions:4c933d54-1428-443c-928d-4e1ecbdd56cb
+
+
+
+Seppuku
+http://blog.tabini.ca/allow-your-node-js-workers-to-die-honourably-with-seppuku/
+
+
+http://stackoverflow.com/questions/7310521/node-js-best-practice-exception-handling
+
+
+
+nginx: `proxy_next_upstream`
+http://wiki.nginx.org/HttpProxyModule#proxy_next_upstream
+- if *any* data has been sent, you're stuck to the upstream
+- if the request caused this error that crashed the upstream, then this will
+crash your next upstream, too

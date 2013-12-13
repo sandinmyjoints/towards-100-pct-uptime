@@ -1,0 +1,109 @@
+* DONE pin versions
+  CLOSED: [2013-11-24 Sun 17:34]
+** use what is in fluencia
+   - node 0.10.20
+   - recluster 0.3.4
+   - express 3.4.0 w/ connect 2.9.0
+* DONE demonstrate client resends POST when no response received
+  CLOSED: [2013-11-24 Sun 17:34]
+  - client that resends bad HTTP requests when worker gives no response,
+    therefore takes down multiple workers
+    - first show that chrome will resend a POST if it receives no response
+    - how long does it wait to do so?
+    - then show with cluster
+    - does it matter if writeHead is called before error (thus sending some
+      data) or not?
+  - Will cluster master buffer/retain connections that are attempted to be made
+    when no workers are accepting connections? -> Yes.
+  - So existing workers may be killed, and if new workers are spun up to replace
+    dead workers, they may also be killed
+#+BEGIN_SRC
+(nvm v0.10.20) ~/scm/wjb/muchtolearn (master)$ node repeater-server.js
+[worker 1 / 56285]: Server running at http://127.0.0.1:1025/
+[worker 2 / 56286]: Server running at http://127.0.0.1:1025/
+[worker 2 / 56286]: GET /
+[worker 2 / 56286]: POST /
+
+/Users/william/scm/sandinmyjoints/muchtolearn/repeater-server.js:40
+            throw new Error("uh-oh");
+                  ^
+Error: uh-oh
+    at Server.<anonymous> (/Users/william/scm/sandinmyjoints/muchtolearn/repeater-server.js:40:19)
+    at Server.EventEmitter.emit (events.js:98:17)
+    at HTTPParser.parser.onIncoming (http.js:2076:12)
+    at HTTPParser.parserOnHeadersComplete [as onHeadersComplete] (http.js:120:23)
+    at Socket.socket.ondata (http.js:1966:22)
+    at TCP.onread (net.js:525:27)
+[worker 1 / 56285]: POST /
+
+/Users/william/scm/sandinmyjoints/muchtolearn/repeater-server.js:40
+            throw new Error("uh-oh");
+                  ^
+Error: uh-oh
+    at Server.<anonymous> (/Users/william/scm/sandinmyjoints/muchtolearn/repeater-server.js:40:19)
+    at Server.EventEmitter.emit (events.js:98:17)
+    at HTTPParser.parser.onIncoming (http.js:2076:12)
+    at HTTPParser.parserOnHeadersComplete [as onHeadersComplete] (http.js:120:23)
+    at Socket.socket.ondata (http.js:1966:22)
+    at TCP.onread (net.js:525:27)
+#+END_SRC
+
+* TODO make table of test cases
+  - unhandled error (sync throw)
+  - uncaught exception (async throw)
+  - request that causes uncaught exception and is resent (GET to endpoint that
+    async throws from a client that resends unfulfilled requests)
+  - service reload / SIGHUP
+  - [ ] try when no keep-alive connections exist
+  - [ ] try when some keep-alive connections exist
+  - [ ] check whether keep-alive clients wind down connections
+
+** What happens when:
+*** http, sync, without try / catch (app-http-sync)
+
+   - client: no response
+   - server: writes error to sderr, throws uncaught, and process exits
+
+*** http, sync, with try / catch (app-http-sync-trycatch)
+
+   - client: gets 500
+   - server: handles with catch
+
+*** http, async, without try / catch (app-http-async)
+
+   - client: no response
+   - server: writes error to sderr, throws uncaught, and process exits
+
+*** http, async, with try / catch (app-http-async-trycatch)
+
+   - client: no response
+   - server: writes error to sderr, throws uncaught, and process exits
+
+** "express handles errors" -- sort of, a bit
+*** express server without try / catch, sync response (app-express-sync)
+
+   - client: gets 500
+   - server: writes error, stack trace to stderr (connect errorHandler)
+
+Express uses default Connect errorHandler.
+
+Connect has default errorHandler middleware that will print stack trace (unless
+env is "test")
+
+*** express server with try / catch, sync response (app-express-sync-trycatch)
+
+   - client: gets 500
+   - server: handles with catch
+
+*** express server without try / catch, async response (app-express-async)
+
+   - client: no response
+   - server: writes error to sderr, throws uncaught, and process exits
+
+*** express server with try / catch, async response (app-express-async-trycatch)
+
+   - client: no response
+   - server: writes error to sderr, throws uncaught, and process exits
+
+
+* TODO learn more about the communication pipe and shared socket. Are they related?
