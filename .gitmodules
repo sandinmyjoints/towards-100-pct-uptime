@@ -1,0 +1,3 @@
+[submodule "examples"]
+	path = examples
+	url = git@github.com:sandinmyjoints/towards-100-pct-uptime-examples.git

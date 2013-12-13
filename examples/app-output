@@ -1,0 +1,82 @@
+(nvm v0.10.18) ~/scm/wjb/muchtolearn (master)$ node index.js
+starting app-express-async-trycatch.js
+starting app-express-async.js
+starting app-express-sync-trycatch.js
+starting app-express-sync.js
+starting app-http-async-trycatch.js
+starting app-http-async.js
+starting app-http-sync-trycatch.js
+starting app-http-sync.js
+
+app-http-sync-trycatch.js (child 6, port 1031)  Server running at http://127.0.0.1:1031/
+app-http-async-trycatch.js (child 4, port 1029)  Server running at http://127.0.0.1:1029/
+app-http-sync.js (child 7, port 1032)  Server running at http://127.0.0.1:1032/
+app-http-async.js (child 5, port 1030)  Server running at http://127.0.0.1:1030/
+app-express-sync.js (child 3, port 1028)  Server running at http://127.0.0.1:1028/
+app-express-sync-trycatch.js (child 2, port 1027)  Server running at http://127.0.0.1:1027/
+app-express-async-trycatch.js (child 0, port 1025)  Server running at http://127.0.0.1:1025/
+app-express-async.js (child 1, port 1026)  Server running at http://127.0.0.1:1026/
+
+app-express-async.js (child 1, port 1026)  error:
+app-express-async.js (child 1, port 1026)  error: /Users/william/scm/sandinmyjoints/muchtolearn/app-express-async.js:10
+app-express-async.js (child 1, port 1026)  error:         throw new Error("uh-oh");
+app-express-async.js (child 1, port 1026)  error:  ^
+app-express-async.js (child 1, port 1026)  error: Error: uh-oh
+    at f [as _onTimeout] (/Users/william/scm/sandinmyjoints/muchtolearn/app-express-async.js:10:15)
+    at Timer.listOnTimeout [as ontimeout] (timers.js:110:15)
+app-express-async.js (child 1, port 1026)  closed
+
+app-express-sync.js (child 3, port 1028)  error: Error: uh-oh
+    at /Users/william/scm/sandinmyjoints/muchtolearn/app-express-sync.js:9:11
+    at callbacks (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:164:37)
+    at param (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:138:11)
+    at pass (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:145:5)
+    at Router._dispatch (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:173:5)
+    at Object.router (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:33:10)
+    at next (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/node_modules/connect/lib/proto.js:190:15)
+    at Object.expressInit [as handle] (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/middleware.js:30:5)
+    at next (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/node_modules/connect/lib/proto.js:190:15)
+    at Object.query [as handle] (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/node_modules/connect/lib/middleware/query.js:44:5)
+
+app-express-sync.js (child 3, port 1028)  error: Error: uh-oh
+    at /Users/william/scm/sandinmyjoints/muchtolearn/app-express-sync.js:9:11
+    at callbacks (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:164:37)
+    at param (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:138:11)
+    at pass (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:145:5)
+    at Router._dispatch (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:173:5)
+    at Object.router (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/router/index.js:33:10)
+    at next (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/node_modules/connect/lib/proto.js:190:15)
+    at Object.expressInit [as handle] (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/lib/middleware.js:30:5)
+    at next (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/node_modules/connect/lib/proto.js:190:15)
+    at Object.query [as handle] (/Users/william/scm/sandinmyjoints/muchtolearn/node_modules/express/node_modules/connect/lib/middleware/query.js:44:5)
+
+app-http-async-trycatch.js (child 4, port 1029)  error:
+app-http-async-trycatch.js (child 4, port 1029)  error: /Users/william/scm/sandinmyjoints/muchtolearn/app-http-async-trycatch.js:9
+app-http-async-trycatch.js (child 4, port 1029)  error:             throw new Error("uh-oh");
+app-http-async-trycatch.js (child 4, port 1029)  error:             ^
+app-http-async-trycatch.js (child 4, port 1029)  error: Error: uh-oh
+    at f [as _onTimeout] (/Users/william/scm/sandinmyjoints/muchtolearn/app-http-async-trycatch.js:9:19)
+    at Timer.listOnTimeout [as ontimeout] (timers.js:110:15)
+app-http-async-trycatch.js (child 4, port 1029)  closed
+
+app-http-async.js (child 5, port 1030)  error:
+app-http-async.js (child 5, port 1030)  error: /Users/william/scm/sandinmyjoints/muchtolearn/app-http-async.js:8
+app-http-async.js (child 5, port 1030)  error:         throw new Error("uh-oh");
+              ^
+app-http-async.js (child 5, port 1030)  error: Error: uh-oh
+    at f [as _onTimeout] (/Users/william/scm/sandinmyjoints/muchtolearn/app-http-async.js:8:15)
+    at Timer.listOnTimeout [as ontimeout] (timers.js:110:15)
+app-http-async.js (child 5, port 1030)  closed
+
+app-http-sync.js (child 7, port 1032)  error:
+app-http-sync.js (child 7, port 1032)  error: /Users/william/scm/sandinmyjoints/muchtolearn/app-http-sync.js:7
+    throw new Error("uh-oh");
+          ^
+app-http-sync.js (child 7, port 1032)  error: Error: uh-oh
+    at Server.<anonymous> (/Users/william/scm/sandinmyjoints/muchtolearn/app-http-sync.js:7:11)
+    at Server.EventEmitter.emit (events.js:98:17)
+    at HTTPParser.parser.onIncoming (http.js:2076:12)
+    at HTTPParser.parserOnHeadersComplete [as onHeadersComplete] (http.js:120:23)
+    at Socket.socket.ondata (http.js:1966:22)
+    at TCP.onread (net.js:525:27)
+app-http-sync.js (child 7, port 1032)  closed
