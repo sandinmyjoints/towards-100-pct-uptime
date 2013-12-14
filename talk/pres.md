@@ -113,13 +113,11 @@ From node/lib/events.js:
 EventEmitter.prototype.emit = function(type) {
   // If there is no 'error' event listener then throw.
   if (type === 'error') {
-    if (this.domain) {
-    ...
+      ...
     } else if (er instanceof Error) {
       throw er; // Unhandled 'error' event
     } else {
-      throw TypeError('Uncaught, unspecified "error" event.');
-    }
+      ...
 ```
 
 Note: If you're not listening for it, what will an uncaught thrown error do?
@@ -151,7 +149,7 @@ try {
   };
   setTimeout(f, 100);
 } catch (ex) {
-  console.log("try / catch can't catch", ex);
+  console.log("try / catch won't catch", ex);
 }
 ```
 
@@ -172,13 +170,35 @@ var f = d.bind(function() {
 setTimeout(f, 1000);
 ```
 
-Note: Try / catch won't help. Wrap async operations in a domain, and the domain will catch thrown exceptions and error
-events.
+Note: Try / catch won't help. Wrap async operations in a domain, and the domain
+will catch thrown exceptions and error events.
 
 
-## EventEmitters bind to domains.
+### The active domain is
+### `domain.active`.
 
-From node/lib/events.js:
+```js
+domain = require('domain');
+
+var d = domain.create();
+d.on('error', function (err) {
+  console.log("domain caught", err);
+});
+console.log(domain.active); // <-- null
+var f = d.bind(function() {
+  console.log(domain.active === d) // <-- true
+  console.log(process.domain === domain.active) // <-- true
+  throw new Error("uh-oh");
+});
+setTimeout(f, 1000);
+```
+
+Note: Current domain is domain.active and also process.domain. This is important
+because...
+
+
+## New EventEmitters bind
+## to the active domain.
 
 ```js
 EventEmitter.prototype.emit = function(type) {
@@ -194,6 +214,8 @@ domain is active when an EE is created, it will associate itself with that
 domain. What does that mean? If the EE has an associated domain, the error will
 be emitted on the domain instead of thrown. This right here can prevent a whole
 bunch of uncaught exceptions, thus saving your server processes.
+
+What to do once you've caught an error?
 
 
 ### Log the error.
@@ -244,7 +266,6 @@ var domainWrapper = function(req, res, next) {
   reqDomain.run(next);
 
   reqDomain.once('error', function(err) {
-    reqDomain.dispose();
     next(err);
   });
 };
@@ -267,8 +288,6 @@ When any EE emits an error, it propagates to the domain associated with that EE.
 The active domain is in `process.domain`
 This middleware triggers error handling middlewarwe. Alternatively, you could just send a response
 like 500.
-Now we're in an error state, so more errors could be thrown. Do you want your error handler
-triggered on all of them?
 
 
 
@@ -278,7 +297,9 @@ triggered on all of them?
 - `intercept`: like bind but handles 1st arg `err`.
 - `domain.dispose`: cancels IO and timers.
 
-Note: If no error, no need to dispose.
+Note: Dispose: If no error, no need to dispose. Now we're in an error state, so
+more errors could be thrown. Do you want your error handler triggered on all of
+them?
 - If no IO or timers, probably no need to dispose.
 The intention of calling dispose is generally to prevent cascading errors when a critical part of
 the Domain context is found to be in an error state.
