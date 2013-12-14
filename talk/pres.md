@@ -126,6 +126,8 @@ Note: If you're not listening for it, what will an uncaught thrown error do?
 ## An uncaught exception
 ## crashes the process.
 
+![dead process](img/dead-smiley.png)
+
 This process might be a server.
 
 It might be handling many requests
@@ -140,7 +142,7 @@ Note: The question is, how to recover and continue as well as possible? It start
 #### 2. Use domains to handle known errors.
 
 
-## `try / catch` doesn't do async.
+## `try/catch` doesn't do async.
 
 ```js
 try {
@@ -158,15 +160,16 @@ try {
 ## `try/catch` for async.
 
 ```js
-domain = require('domain');
+var d = require('domain').create();
 
-var d = domain.create();
 d.on('error', function (err) {
   console.log("domain caught", err);
 });
+
 var f = d.bind(function() {
   throw new Error("uh-oh");
 });
+
 setTimeout(f, 1000);
 ```
 
@@ -178,19 +181,13 @@ will catch thrown exceptions and error events.
 ### `domain.active`.
 
 ```js
-domain = require('domain');
-
-var d = domain.create();
-d.on('error', function (err) {
-  console.log("domain caught", err);
-});
 console.log(domain.active); // <-- null
+
 var f = d.bind(function() {
   console.log(domain.active === d) // <-- true
   console.log(process.domain === domain.active) // <-- true
   throw new Error("uh-oh");
 });
-setTimeout(f, 1000);
 ```
 
 Note: Current domain is domain.active and also process.domain. This is important
@@ -237,8 +234,8 @@ Maybe useful for tracing errors and debugging.
 * Abort (e.g., return 500).
 * Throw (becomes an unknown error).
 
-Note: it's up to depending on context: what kind of error, what is emitting,
-what state are things in.
+Note: it's up to you depending on context: what kind of error, what is emitting
+the error, what your application is doing... No general answer.
 
 
 ### Do I have to create a new domain every
@@ -324,15 +321,13 @@ Note: For example,
 
 
 ### node-mongodb-native does not play well
-### with `process.domain`.
+### with active domain.
 
 ```js
-app.use(function(req, res, next) {
-  console.log(process.domain); // a domain
-  UserModel.findOne(function(err, doc) {
-    console.log(process.domain); // undefined
-    next();
-  });
+console.log(process.domain); // a domain
+UserModel.findOne(function(err, doc) {
+  console.log(process.domain); // undefined
+  next();
 });
 ```
 
@@ -347,13 +342,11 @@ This is the lib that Mongoose is built around.
 ### Use explicit binding.
 
 ```js
-app.use(function(req, res, next) {
-  console.log(process.domain); // a domain
-  AppModel.findOne(process.domain.bind(function(err, doc) {
-    console.log(process.domain); // still a domain
-    next();
-  }));
-});
+console.log(process.domain); // a domain
+AppModel.findOne(process.domain.bind(function(err, doc) {
+  console.log(process.domain); // still a domain
+  next();
+}));
 ```
 
 
