@@ -371,11 +371,9 @@ Note: I've opened a ticket with node-mongodb-native to find out more about this 
 
 ### Not if only one instance of your app is running.
 
-Note: When that instance is down, or restarting, it's unavailable. And if it goes down hard, any
-in-flight requests when are toast. Some operations can still trigger uncaught exceptions. Or just
-because an error is caught by a domain doesn't mean you can always keep going. You might not be in a
-state that you can recover from. It might be safer to let this process die -- but what then? What
-about the time between when this process dies and its successor comes up?
+Note: When that instance is down, or restarting, perhaps due to re-thrown or
+uncaught error or deploy/upgrade, it's unavailable. What about the time between
+when this process dies and its successor comes up? That's downtime.
 
 This brings us to #3...
 
@@ -402,6 +400,8 @@ One process per CPU = cluster.
 * When workers want to listen to a socket/server, master registers them for it.
 * Each new connection to socket is handed off to a worker.
 * No shared application state between workers.
+
+Note: TODO replace with image
 
 
 
@@ -491,10 +491,26 @@ https://github.com/doxout/recluster
 - Simple, relatively easy to reason about.
 
 
+
 ## We went with recluster.
 ### Happy so far.
 
-TODO recluster sample
+```js
+recluster = require('recluster')
+cluster   = recluster("server.js", opts)
+  .on("message", function(worker, msg) {
+    console.log("Worker " + worker.id + ": " + msg);
+  })
+  .run();
+process.on("SIGHUP", function() {
+  cluster.reload();
+})
+```
+
+Note: Example (simplified) master.js. Some opts includes num workers, and timeout,
+which is how long to let old workers live after they stop accepting new
+connections, in seconds. If this is zero, workers are killed instantly without
+having a chance to cleanly close down existing connections.
 
 
 
