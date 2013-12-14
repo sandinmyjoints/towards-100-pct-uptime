@@ -27,7 +27,9 @@
 	}
 
 	var DEFAULT_SLIDE_SEPARATOR = '^\n---\n$',
-		DEFAULT_NOTES_SEPARATOR = 'note:';
+		DEFAULT_NOTES_SEPARATOR = 'note:',
+		DEFAULT_ELEMENT_ATTRIBUTES_SEPARATOR = '\\\.element\\\s*?(.+?)$',
+		DEFAULT_SLIDE_ATTRIBUTES_SEPARATOR = '\\\.slide:\\\s*?(\\\S.+?)$';
 
 
 	/**
@@ -171,7 +173,7 @@
 		// flatten the hierarchical stack, and insert <section data-markdown> tags
 		for( var i = 0, len = sectionStack.length; i < len; i++ ) {
 			// vertical
-			if( sectionStack[i].propertyIsEnumerable( length ) && typeof sectionStack[i].splice === 'function' ) {
+			if( sectionStack[i] instanceof Array ) {
 				markdownSections += '<section '+ options.attributes +'>';
 
 				sectionStack[i].forEach( function( child ) {
@@ -260,12 +262,76 @@
 
 			}
 			else {
-
 				section.innerHTML = createMarkdownSlide( getMarkdownFromSlide( section ) );
-
 			}
 		}
 
+	}
+
+	/**
+	 * Check if a node value has the attributes pattern.
+	 * If yes, extract it and add that value as one or several attributes
+	 * the the terget element.
+	 *
+	 * You need Cache Killer on Chrome to see the effect on any FOM transformation
+	 * directly on refresh (F5)
+	 * http://stackoverflow.com/questions/5690269/disabling-chrome-cache-for-website-development/7000899#answer-11786277
+	 */
+	function addAttributeInElement( node, elementTarget, separator ) {
+
+		var mardownClassesInElementsRegex = new RegExp( separator, 'mg' );
+		var mardownClassRegex = new RegExp( "([^\"= ]+?)=\"([^\"=]+?)\"", 'mg' );
+		var nodeValue = node.nodeValue;
+		if( matches = mardownClassesInElementsRegex.exec( nodeValue ) ) {
+
+			var classes = matches[1];
+			nodeValue = nodeValue.substring( 0, matches.index ) + nodeValue.substring( mardownClassesInElementsRegex.lastIndex );
+			node.nodeValue = nodeValue;
+			while( matchesClass = mardownClassRegex.exec( classes ) ) {
+				elementTarget.setAttribute( matchesClass[1], matchesClass[2] );
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Add attributes to the parent element of a text node,
+	 * or the element of an attribute node.
+	 */
+	function addAttributes( section, element, previousElement, separatorElementAttributes, separatorSectionAttributes ) {
+
+		if ( element != null && element.childNodes != undefined && element.childNodes.length > 0 ) {
+			previousParentElement = element;
+			for( var i = 0; i < element.childNodes.length; i++ ) {
+				childElement = element.childNodes[i];
+				if ( i > 0 ) {
+					j = i - 1;
+					while ( j >= 0 ) {
+						aPreviousChildElement = element.childNodes[j];
+						if ( typeof aPreviousChildElement.setAttribute == 'function' && aPreviousChildElement.tagName != "BR" ) {
+							previousParentElement = aPreviousChildElement;
+							break;
+						}
+						j = j - 1;
+					}
+				}
+				parentSection = section;
+				if( childElement.nodeName ==  "section" ) {
+					parentSection = childElement ;
+					previousParentElement = childElement ;
+				}
+				if ( typeof childElement.setAttribute == 'function' || childElement.nodeType == Node.COMMENT_NODE ) {
+					addAttributes( parentSection, childElement, previousParentElement, separatorElementAttributes, separatorSectionAttributes );
+				}
+			}
+		}
+
+		if ( element.nodeType == Node.COMMENT_NODE ) {
+			if ( addAttributeInElement( element, previousElement, separatorElementAttributes ) == false ) {
+				addAttributeInElement( element, section, separatorSectionAttributes );
+			}
+		}
 	}
 
 	/**
@@ -289,6 +355,12 @@
 				var markdown = getMarkdownFromSlide( section );
 
 				section.innerHTML = marked( markdown );
+				addAttributes( 	section, section, null, section.getAttribute( 'data-element-attributes' ) ||
+								section.parentNode.getAttribute( 'data-element-attributes' ) ||
+								DEFAULT_ELEMENT_ATTRIBUTES_SEPARATOR,
+								section.getAttribute( 'data-attributes' ) ||
+								section.parentNode.getAttribute( 'data-attributes' ) ||
+								DEFAULT_SLIDE_ATTRIBUTES_SEPARATOR);
 
 				// If there were notes, we need to re-add them after
 				// having overwritten the section's HTML
