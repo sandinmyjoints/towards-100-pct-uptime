@@ -18,12 +18,11 @@ entirely. :)
 
 <img src='img/sd-logo.png' alt="SpanishDict" style="width: 500px; height: 85px">
 
-9M uniques / month.
-<br>
+### 9M uniques / month.
 <br>
 ![Fluencia](img/fluencia-logo.jpg)
 
-75K+ users, some are paid subscribers.
+### 75K+ users, some are paid subscribers.
 
 Note: About me: I'm a Software Engineer, one of three, at Curiosity Media.
 We have two main properties:
@@ -49,8 +48,7 @@ much.
 
 
 ### Important, but
-## out of scope
-### for this talk:
+## out of scope:
 
 * Redundant infrastructure.
 * Backups.
@@ -479,10 +477,7 @@ https://github.com/doxout/recluster
 ## We went with recluster.
 ### Happy so far.
 
-
-Some of what these modules do may be reinventing the wheel.
-
-I'm still learning the extent of what is going on in Node's `child_process` and `cluster` modules.
+TODO recluster sample
 
 
 
@@ -618,9 +613,9 @@ time is up and the worker just has to go.
 
 - Point symlink to new version.
 - Send signal to cluster master.
-- Cluster master tells workers to stop accepting new connections.
-- Cluster master forks new workers from new version of code.
-- Workers shutdown gracefully.
+- Master tells existing workers to stop accepting new connections.
+- Master forks new workers from new code.
+- Existing workers shutdown gracefully.
 
 Note: master never stops. There are always workers accepting new connections.
 Workers close out existing connections before dying.
@@ -744,7 +739,7 @@ can't guarantee it. But then, who can?
 
 
 
-### Must bump cluster master when:
+### Must restart cluster master when:
 
 * Upgrade Node.
 * Cluster master code changes.
@@ -827,11 +822,7 @@ If you thought this was interesting,
 
 ## We're hiring.
 
-[curiositymedia.theresumator.com](http://curiositymedia.theresumator.com/)
-
-![Fluencia](img/fluencia-logo.jpg)
-
-<img src='img/sd-logo.png' alt="SpanishDict" style="width: 500px; height: 85px">
+## [careers.fluencia.com](http://careers.fluencia.com/)
 
 
 
