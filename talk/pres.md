@@ -25,12 +25,13 @@ entirely. :)
 ### 75K+ users, some are paid subscribers.
 
 Note: About me: I'm a Software Engineer, one of three, at Curiosity Media.
-We have two main properties:
-SpanishDict and Fluencia.
+
+We have two main properties: SpanishDict and Fluencia.
+
 SpanishDict is a traditional web site, with page reloads.
-Fluencia is a single page web app with AJAX calls to a REST API. We want both to
-run all the time, every day.
-Both run Node.js on the backend.
+Fluencia is a single page web app with AJAX calls to a REST API.
+
+We want both to run all the time, every day. Both run Node.js on the backend.
 
 
 
@@ -40,7 +41,9 @@ Both run Node.js on the backend.
 ![Downtime](img/platform-downtime.png)
 
 Note: Downtime is bad for all sorts of reasons.
+
 Users go away.
+
 If you know that deploying code can cause a bad experience for users who
 are online, or cause system errors or corrupted data, you won't deploy as
 much.
@@ -55,9 +58,9 @@ much.
 * Disaster recovery.
 
 Note: Lots of things can cause downtime.
-- Database.
-- Network.
-- Imperfect engineers (e.g., me).
+Database.
+Network.
+Imperfect engineers (e.g., me).
 
 
 ## In scope:
