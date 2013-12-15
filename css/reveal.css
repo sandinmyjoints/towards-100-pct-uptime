@@ -296,6 +296,7 @@ body {
 }
 
 .reveal blockquote {
+    font-size: 1.2em;
 	display: block;
 	position: relative;
 	width: 70%;
@@ -1876,5 +1877,3 @@ body {
 .zoomed .reveal .roll span:after {
 	visibility: hidden;
 }
-
-

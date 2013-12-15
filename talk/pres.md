@@ -128,13 +128,17 @@ Note: If you're not listening for it, what will an uncaught thrown error do?
 
 ![dead process](img/dead-smiley.png)
 
-This process might be a server.
 
-It might be handling many requests
-<br>
-from many clients the moment it crashes.
+## If the process is a server: ![no response](img/no-response.png)
+<h2 style="position: relative; top: -60px"> x 100s??</h2>
 
-Note: The question is, how to recover and continue as well as possible? It starts with...
+Note: This process might be a server handling many requests from many clients
+the moment it crashes. Uncaught exceptions can produce an even scarier type of
+downtime than the screen we saw before -- maybe for any given client, a single
+response fails, no response at all -- but for a single server, this could happen
+for 100s or 1000s of clients if the uncaught exception is handled poorly. **The
+question is**, how to recover and continue as well as possible? It starts
+with...
 
 
 
@@ -242,8 +246,7 @@ the error, what your application is doing... No general answer.
 ### time I do an async operation?
 
 Note: Like every time I handle a request / response cycle?
-You could.
-That would work.
+Not necessarily. Can group related operations. For example...
 
 
 
@@ -282,7 +285,6 @@ EEs can be explicitly added to a domain.
 Then we run the rest of the req / res stack through the context of the domain,
 and when new EEs are created, they add themselves to the active domain.
 When any EE emits an error, it propagates to the domain associated with that EE.
-The active domain is in `process.domain`
 This middleware triggers error handling middlewarwe. Alternatively, you could just send a response
 like 500.
 
@@ -372,7 +374,7 @@ Note: I've opened a ticket with node-mongodb-native to find out more about this 
 ### Not if only one instance of your app is running.
 
 Note: When that instance is down, or restarting, perhaps due to re-thrown or
-uncaught error or deploy/upgrade, it's unavailable. What about the time between
+uncaught error or deploy/upgrade, it's unavailable. The time between
 when this process dies and its successor comes up? That's downtime.
 
 This brings us to #3...
@@ -407,18 +409,16 @@ Note: TODO replace with image
 
 ### What about when a worker isn't working anymore?
 
-#### (Perhaps due to an uncaught exception.)
-
 ### Some coordination is needed.
 
 
-* Worker tells cluster master it's done accepting new connections.
+1. Worker tells cluster master it's done accepting new connections.
 
-* Cluster master forks replacement.
+2. Cluster master forks replacement.
 
-* Worker stays around to clean up.
+3. Worker stays around to clean up.
 
-* Master cannot wait for worker to die before replacing!
+3. Master cannot wait for worker to die before replacing!
 
 
 
@@ -429,7 +429,7 @@ Another use case for cluster:
 
 * Something must manage that = cluster master process.
 
-Note: a bit like a deliberately induced error across all your workers.
+Note: Deploy is a bit like a deliberately induced error across all your workers.
 
 
 
@@ -437,7 +437,7 @@ Note: a bit like a deliberately induced error across all your workers.
 
 * When master starts, point a symlink to worker code.
 
-* On deploy new code, update symlink.
+* After deploy new code, update symlink.
 
 * Send signal to master: fork new workers!
 
@@ -496,25 +496,27 @@ https://github.com/doxout/recluster
 ### Happy so far.
 
 ```js
-recluster = require('recluster')
-cluster   = recluster("server.js", opts)
-  .on("message", function(worker, msg) {
-    console.log("Worker " + worker.id + ": " + msg);
-  })
-  .run();
+cluster = recluster("server.js", opts).run();
+
+cluster.on("message", function(w, msg) {
+  console.log("Worker " + w.id + ": " + msg);
+})
+
 process.on("SIGHUP", function() {
   cluster.reload();
-})
+});
 ```
 
-Note: Example (simplified) master.js. Some opts includes num workers, and timeout,
-which is how long to let old workers live after they stop accepting new
-connections, in seconds. If this is zero, workers are killed instantly without
-having a chance to cleanly close down existing connections.
+Note: This ia very simplified example master.js. Cluster emits a variety of
+events, such as listening and exited, and you would want to log those. Some opts
+includes num workers, and timeout, which is how long to let old workers live
+after they stop accepting new connections, in seconds. If this is zero, workers
+are killed instantly without having a chance to cleanly close down existing
+connections.
 
 
 
-#### We have been talking about
+#### I have been talking about
 #### starting / stopping workers
 #### as if it's atomic.
 
@@ -531,11 +533,8 @@ having a chance to cleanly close down existing connections.
 
 ### Give it a grace period to do clean up.
 
-Note: Don't call `process.exit` right away! Slightly controversial? If it is in
-such a bad state (e.g., db disconnected), bad things might happen to in-flight
-requests, too. I don't know of any better way to recover from that. Similar to
-domain.dispose. Interested in ideas. More likely, if it's an application error,
-the other requests will be fine.
+Note: `process.exit` is how you shut down a node process. When you want to shut
+down a server, Don't call `process.exit` right away!
 
 
 ### When a server closes,
@@ -623,7 +622,12 @@ var afterHook = function(req, res, next) {
 If timeout period expires and server is still around, call `process.exit`.
 
 Note: This then becomes a hard shutdown for any clients still connected, but
-time is up and the worker just has to go.
+time is up and the worker just has to go. This whole techinque might be
+controversial? If the server is in a bad state (e.g., db disconnected), bad
+things might happen to these in-flight requests that we are trying to finish out
+cleanly, too. But they would have anyway if you had just down a hard shutdown
+without trying to close cleanly. So might as well try it. Most likely, if the
+shutdown is due to an application error, the other requests will be fine.
 
 
 
@@ -634,7 +638,7 @@ time is up and the worker just has to go.
 
 
 
-## On boot:
+## On startup:
 
 - OS process manager (e.g., Upstart) starts service.
 - Service brings up cluster master.
@@ -657,7 +661,7 @@ Workers close out existing connections before dying.
 ## On known error:
 
 - Server catches it via domain.
-- Next action depends on you: retry? abort? etc.
+- Next action depends on you: retry? abort? rethrow? etc.
 
 Note: There is no catch-all action here: it really depends on your app and on
 what error you've got. Also, you can use contextual domains that catch errors
@@ -700,9 +704,9 @@ Node docs say not to keep running.
 > </cite>
 > </footer>
 
-Note: By definition, you don't know what's going on, so there's no sure way to
-recover. This comes from Node not separating your application from the server.
-With power comes responsibility.
+Note: This makes sense. By definition, you don't know what's going on, so
+there's no sure way to recover. This comes from Node not separating your
+application from the server. With power comes responsibility.
 
 
 ### What to do?
@@ -717,16 +721,17 @@ First, log the error so you know what happened.
 ### with minimal trouble.
 
 
-## On unknown error
-## (uncaught exception)
+## On uncaught exception,
+## shutdown gracefully:
 
-Graceful shutdown.
 - Log the error.
 - Server stops accepting new connections.
 - Worker tells cluster master "no more new connections"
-- Cluster master forks a replacement worker.
-- Worker exits when all connections are closed, or after
-a reasonable timeout.
+- Master forks a replacement worker.
+- Worker exits when all connections are closed, or after timeout.
+
+Note: Similar to what we have seen for deploy, except that this time, the worker
+tells the master it is going down.
 
 
 
@@ -746,13 +751,12 @@ a reasonable timeout.
 > </cite></footer>
 
 Note: Felix Geisendorfer, who originally added process.on uncaughtException, and
-has also asked for it to be removed!
+has also asked for it to be removed (unsuccessfully)!
 
 
 
 ### This is too bad, because you want to
 ### always return a response, even on error.
-
 
 Note: Keeping a client hanging can come back to bite you. 1) the user agent
 appears to hang and 2) it might resend the bad request once the connection
@@ -776,7 +780,6 @@ can't guarantee it. But then, who can?
 
 * Upgrade Node.
 * Cluster master code changes.
-* OS service (e.g., Upstart) definition changes.
 
 
 
