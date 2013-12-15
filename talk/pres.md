@@ -136,15 +136,17 @@ Note: If you're not listening for it, what will an uncaught thrown error do?
 
 
 ## If the process is a server: ![no response](img/no-response.png)
-<h2 style="position: relative; top: -60px"> x 100s??</h2>
+<h2 style="position: relative; top: -70px"> x 100s??</h2>
 
 Note: This process might be a server handling many requests from many clients
-the moment it crashes. Uncaught exceptions can produce an even scarier type of
-downtime than the screen we saw before -- maybe for any given client, a single
-response fails, no response at all -- but for a single server, this could happen
-for 100s or 1000s of clients if the uncaught exception is handled poorly. **The
-question is**, how to recover and continue as well as possible? It starts
-with...
+when it crashes. This is an even scarier type of downtime than the screen we saw
+before: for any given client, a single response fails -- so for a single server,
+this could be happening for 100s or 1000s of clients if the uncaught exception
+is handled poorly and the process crashes. **The question is**, how to recover
+from this and continue as well as possible?
+
+
+## It starts with...
 
 
 
@@ -611,7 +613,7 @@ Note: HTTP defaults to keep-alive which keeps the underyling TCP connection
 open. We want to close those TCP connections for our dying worker. Set keepalive
 timeouts to 1 so as soon there is any activity on a particular connection, it
 closes right away. This will decrease the number of existing connections so that
-`server.close` calls back. TODO Learn more about this.
+`server.close` calls back.
 
 
 
