@@ -103,6 +103,8 @@ Note: Without further ado, here are the...
 ## 4. Gracefully terminate connections.
 ![no downtime](img/no-platform-downtime.jpg)
 
+Note: We're going to visit each of these in detail.
+
 
 
 ## 1. Sensibly handle uncaught exceptions.
@@ -126,7 +128,9 @@ EventEmitter.prototype.emit = function(type) {
       ...
 ```
 
-Note: If you're not listening for it, what will an uncaught thrown error do?
+Note: If we're emitting an event of type error, then throw it! No try / catch
+around this. If you're not listening for it, what will an uncaught thrown error
+do?
 
 
 ## An uncaught exception
@@ -193,6 +197,7 @@ will catch thrown exceptions and error events.
 ### `domain.active`.
 
 ```js
+var d = require('domain').create();
 console.log(domain.active); // <-- null
 
 var f = d.bind(function() {
@@ -225,6 +230,7 @@ be emitted on the domain instead of thrown. This right here can prevent a whole
 bunch of uncaught exceptions, thus saving your server processes.
 
 What to do once you've caught an error?
+You've caught an error with your domain (TODO: image of catching a fish)
 
 
 ### Log the error.
@@ -271,11 +277,11 @@ var domainWrapper = function(req, res, next) {
   reqDomain.add(req);
   reqDomain.add(res);
 
-  reqDomain.run(next);
-
   reqDomain.once('error', function(err) {
-    next(err);
+    res.send(500); // or next(err);
   });
+
+  reqDomain.run(next);
 };
 ```
 
@@ -299,10 +305,11 @@ like 500.
 
 
 ## Domain methods.
+- `add`: bind an EE to the domain.
 - `run`: run a function in context of domain.
 - `bind`: bind one function.
 - `intercept`: like bind but handles 1st arg `err`.
-- `domain.dispose`: cancels IO and timers.
+- `dispose`: cancels IO and timers.
 
 Note: Dispose: If no error, no need to dispose. Now we're in an error state, so
 more errors could be thrown. Do you want your error handler triggered on all of
@@ -346,7 +353,8 @@ See https://github.com/LearnBoost/mongoose/pull/1337
 </small>
 
 Note:
-This is the lib that Mongoose is built around.
+This is the lib that Mongoose is built around. Why this is is outside the scope
+of this and I don't have a good handle on it yet, but I'm trying to learn more.
 
 
 ### Use explicit binding.
@@ -359,6 +367,9 @@ AppModel.findOne(process.domain.bind(function(err, doc) {
 }));
 ```
 
+Note: of course, if you have a lot of db operations, this could get tedious and
+be error-prone because you might miss one...
+
 
 
 ### What other operations don't play well
@@ -370,7 +381,8 @@ Package authors could note this.
 
 Also, as we find them, let's note them.
 
-Note: I've opened a ticket with node-mongodb-native to find out more about this particular case.
+Note: I'm opening a ticket with node-mongodb-native to find out more about this
+particular case.
 
 
 
@@ -451,19 +463,27 @@ Note: Deploy is a bit like a deliberately induced error across all your workers.
 
 * Master process never stops running!
 
+Note: Master process never stops, so the socket is continually open and never
+refuses connections.
+
 
 ## Signals.
 A way to communicate with running processes.
 
-- `SIGHUP`: cycle workers (some like `SIGUSR2`).
+`SIGHUP`: cycle workers (some like `SIGUSR2`).
 
-- `$ kill -s HUP`
+`$ kill -s HUP <pid>`
 
-- `$ service node-app reload`
+`$ service <node-service-name> reload`
 
 
 
 ## Process management options.
+
+Note: You can write your own process management code with cluster, and it's
+educational. Getting the behavior correct for all worker states is great fun, or
+if you want to simplify your life, there are packages out there that will do it
+for you.
 
 
 ## Forever
@@ -473,7 +493,6 @@ https://github.com/nodejitsu/forever
 - No cluster awareness &mdash; used on a single process.
 - Simply restarts the process when it dies.
 - More comparable to Upstart or Monit.
-- Lots of GH issues.
 
 
 ## Naught
@@ -500,18 +519,6 @@ https://github.com/doxout/recluster
 
 ## We went with recluster.
 ### Happy so far.
-
-```js
-cluster = recluster("server.js", opts).run();
-
-cluster.on("message", function(w, msg) {
-  console.log("Worker " + w.id + ": " + msg);
-})
-
-process.on("SIGHUP", function() {
-  cluster.reload();
-});
-```
 
 Note: This ia very simplified example master.js. Cluster emits a variety of
 events, such as listening and exited, and you would want to log those. Some opts
@@ -549,57 +556,56 @@ down a server, you don't want to call `process.exit` right away!
 * HTTP keep-alive (open TCP) connections.
 
 
-
 ### How to clean up
 Revisiting our middleware from earlier:
 
 ```js
-var domainWrapper = function(before, after) {
+var domainWrapper = function(afterErrorHook) {
   return function(req, res, next) {
     var reqDomain = domain.create();
     reqDomain.add(req);
     reqDomain.add(res);
-    reqDomain.run(next);
+
     reqDomain.once('error', function(err) {
-      if(before) before(err);  // Hook.
       next(err);
-      if(after) after(err);  // Hook.
+      if(afterErrorHook) afterErrorHook(err);  // Hook.
     });
+    reqDomain.run(next);
   };
 };
 ```
 
-Note: Add before and after hooks for cleanup.
+Note: Add after-error hook for cleanup. What do we put into the after-error
+hook?
 
 
 
 ## Call `server.close`.
-Graceful by default: calls back once server has closed all existing connections.
 
 ```js
-var afterHook = function(req, res, next) {
+var afterErrorHook = function(req, res, next) {
   server.close(); // <-- close server
   next();
 }
 ```
 
-Note: Node's server class has a method `close` that is pretty graceful by
-default. It will call back once all existing connections are closed.
+Note: Node's server class has a method `close` that stops the server from
+accepting new connections. Call it to ensure that this worker handles no more work.
 
 
 
 ## Shut down keep-alive connections.
 
 ```js
-var afterHook = function(req, res, next) {
+var afterErrorHook = function(req, res, next) {
   app.set("isShuttingDown", true); // <-- set state
   server.close();
   next()
 }
 
 var shutdownMiddle = function(req, res, next) {
-  if(app.get("isShuttingDown") {  <-- check state
-    req.connection.setTimeout(1);  <-- kill keep-alive
+  if(app.get("isShuttingDown") {  // <-- check state
+    req.connection.setTimeout(1);  // <-- kill keep-alive
   }
   next();
 }
@@ -610,17 +616,19 @@ Idea from https://github.com/mathrawka/express-graceful-exit
 </small>
 
 Note: HTTP defaults to keep-alive which keeps the underyling TCP connection
-open. We want to close those TCP connections for our dying worker. Set keepalive
-timeouts to 1 so as soon there is any activity on a particular connection, it
-closes right away. This will decrease the number of existing connections so that
-`server.close` calls back.
+open. We want to close those TCP connections for our dying worker. So we set
+**global** app state that we are shutting down, and for every TCP connection, w
+set the keepalive timeout to a minimal value -- so as soon there is any activity
+on that particular connection, it basically closes right away. This will
+decrease the number of existing connections over time.
 
 
 
-### Then you can call `process.exit`.
+### Then call `process.exit`
+### in `server.close` callback.
 
 ```js
-var afterHook = function(req, res, next) {
+var afterErrorHook = function(req, res, next) {
   app.set("isShuttingDown", true);
   server.close(function() {
     process.exit(1);  // <-- all clear to exit
@@ -628,17 +636,22 @@ var afterHook = function(req, res, next) {
 }
 ```
 
+Note: `server.close` is actually pretty graceful by default. It will only call
+back once all existing connections are closed. So we put the call to
+`process.exit` inside of it.
+
 
 ### Set a timer.
 If timeout period expires and server is still around, call `process.exit`.
 
 Note: This then becomes a hard shutdown for any clients still connected, but
-time is up and the worker just has to go. This whole techinque might be
-controversial? If the server is in a bad state (e.g., db disconnected), bad
-things might happen to these in-flight requests that we are trying to finish out
-cleanly, too. But they would have anyway if you had just down a hard shutdown
-without trying to close cleanly. So might as well try it. Most likely, if the
-shutdown is due to an application error, the other requests will be fine.
+time is up and the worker just has to go. This whole idea of gracefully shutting
+down is all about "best efforts". If the server is in a bad state (e.g., db
+disconnected), bad things might happen to these in-flight requests that we are
+trying to finish out cleanly, too. But they would have anyway if you had just
+down a hard shutdown without trying to close cleanly. So might as well try it.
+Most likely, if the shutdown is due to an application error, the other requests
+will be fine.
 
 
 
@@ -674,15 +687,16 @@ Workers close out existing connections before dying.
 - Next action depends on you: retry? abort? rethrow? etc.
 
 Note: There is no catch-all action here: it really depends on your app and on
-what error you've got. Also, you can use contextual domains that catch errors
-from specific operations so you have a better sense of what kinds of errors will
-be caught.
+what error you've got. Note that you can use contextual domains that catch
+errors from specific operations or groups of operations so you have a better
+sense of what kinds of errors are being handled by a particular domain.
 
 
 ## On uncaught exception:
 
 - ??
 
+The infamous "uncaughtException" event:
 ```js
 process.on('uncaughtException', function(err) {
   // ??
@@ -716,7 +730,8 @@ Node docs say not to keep running.
 
 Note: This makes sense. By definition, you don't know what's going on, so
 there's no sure way to recover. This comes from Node not separating your
-application from the server. With power comes responsibility.
+application from the server. It doesn't run in a container like mod_php or
+mod_wsgi with Apache.
 
 
 ### What to do?
@@ -725,6 +740,8 @@ First, log the error so you know what happened.
 
 ### Then, you've got to
 ### kill the process.
+
+Note: (TODO: Old Yeller image??)
 
 
 ### It's not so bad. We can now do so
@@ -744,7 +761,7 @@ tells the master it is going down.
 
 
 
-### What about the response that killed the worker?
+### What about the request that killed the worker?
 
 ### How does the dying worker gracefully respond to it?
 
@@ -759,8 +776,9 @@ tells the master it is going down.
 > <small>-felixge, https://github.com/joyent/node/issues/2582</small>
 > </cite></footer>
 
-Note: Felix Geisendorfer, who originally added process.on uncaughtException, and
-has also asked for it to be removed (unsuccessfully)!
+Note: Felix Geisendorfer, Node community member who originally added the
+uncaughtException handler, and has also asked for it to be removed
+(unsuccessfully)!
 
 
 
@@ -771,9 +789,17 @@ Note: Keeping a client hanging can come back to bite you. 1) the user agent
 appears to hang and 2) it might resend the bad request once the connection
 closes and trigger another exception! This in the HTTP spec. I've seen this
 happen. It's not pretty. Can crash multiple workers. This presentation was
-originally titled "I Have Much to Learn About Node.js" becaus of my experience
-with this particular behavior. It's still titled "Towards 100% Uptime" because I
-can't guarantee it. But then, who can?
+originally titled "I Have Much to Learn About Node.js" because of my surprise at
+seeing what happened due to this particular behavior and some less robust error
+handling that we were doing.
+
+
+
+### This is "Towards 100% Uptime" because
+### these approaches don't guarantee responses
+### for every client.
+
+But we can get very close.
 
 
 
@@ -807,8 +833,8 @@ Should be brief. Probably preferable to downtime.
 ### on your dev and staging servers.
 (Disable this in production.)
 
-Note: This is really helpful for debugging and testing. Make sure to both a sync
-and an async version.
+Note: This is really helpful for debugging and testing. Maybe have multiple ones
+for sync, async, db errors, etc.
 
 
 #### Tip:
