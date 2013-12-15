@@ -10,8 +10,8 @@ didn't you see the giant **warning** on the box?!"
 "That's OK," the guy says, while he puffs away. "I'm a computer programmer."
 "So? What's **that** got to do with anything?"
 "We don't care about **warnings**. We only care about **errors**."
-From http://stackoverflow.com/a/235307/599258
-We indeed care greatly about errors. Though probably best not ignore warnings
+(From http://stackoverflow.com/a/235307/599258)
+We indeed care greatly about errors. Though probably best not to ignore warnings
 entirely. :)
 
 
@@ -44,6 +44,8 @@ Note: Downtime is bad for all sorts of reasons.
 
 Users go away.
 
+You might get paged in the middle of the night.
+
 If you know that deploying code can cause a bad experience for users who
 are online, or cause system errors or corrupted data, you won't deploy as
 much.
@@ -61,6 +63,8 @@ Note: Lots of things can cause downtime.
 Database.
 Network.
 Imperfect engineers (e.g., me).
+Lots of factors needed to prevent it in entirely. Some of them are out of scope
+for this presentation.
 
 
 ## In scope:
@@ -81,11 +85,13 @@ Note: Without further ado, here are the...
 ![no downtime](img/no-platform-downtime.jpg)
 
 
-## 1. Sensibly handle uncaught exceptions.
+## 1. Sensibly handle
+## uncaught exceptions.
 ![no downtime](img/no-platform-downtime.jpg)
 
 
-## 2. Use domains to handle known errors.
+## 2. Use domains
+## to handle known errors.
 ![no downtime](img/no-platform-downtime.jpg)
 
 
@@ -416,16 +422,14 @@ Note: TODO replace with image
 
 2. Cluster master forks replacement.
 
-3. Worker stays around to clean up.
-
-3. Master cannot wait for worker to die before replacing!
+3. Worker dies.
 
 
 
 Another use case for cluster:
 ## Deployment.
 
-* Want replace all existing servers.
+* Want to replace all existing servers.
 
 * Something must manage that = cluster master process.
 
@@ -534,7 +538,7 @@ connections.
 ### Give it a grace period to do clean up.
 
 Note: `process.exit` is how you shut down a node process. When you want to shut
-down a server, Don't call `process.exit` right away!
+down a server, you don't want to call `process.exit` right away!
 
 
 ### When a server closes,
@@ -577,21 +581,25 @@ var afterHook = function(req, res, next) {
 }
 ```
 
+Note: Node's server class has a method `close` that is pretty graceful by
+default. It will call back once all existing connections are closed.
+
+
 
 ## Shut down keep-alive connections.
 
 ```js
-var shutdownMiddle = function(req, res, next) {
-  if(app.get("isShuttingDown") {
-    req.connection.setTimeout(1);
-  }
-  next();
-}
-
 var afterHook = function(req, res, next) {
   app.set("isShuttingDown", true); // <-- set state
   server.close();
   next()
+}
+
+var shutdownMiddle = function(req, res, next) {
+  if(app.get("isShuttingDown") {  <-- check state
+    req.connection.setTimeout(1);  <-- kill keep-alive
+  }
+  next();
 }
 ```
 
@@ -601,8 +609,9 @@ Idea from https://github.com/mathrawka/express-graceful-exit
 
 Note: HTTP defaults to keep-alive which keeps the underyling TCP connection
 open. We want to close those TCP connections for our dying worker. Set keepalive
-timeouts to 1 so as soon there is activity, they close right away. TODO Learn
-more about this.
+timeouts to 1 so as soon there is any activity on a particular connection, it
+closes right away. This will decrease the number of existing connections so that
+`server.close` calls back. TODO Learn more about this.
 
 
 
@@ -612,7 +621,7 @@ more about this.
 var afterHook = function(req, res, next) {
   app.set("isShuttingDown", true);
   server.close(function() {
-    process.exit(1);  // <-- call process.exit
+    process.exit(1);  // <-- all clear to exit
   });
 }
 ```
@@ -631,7 +640,7 @@ shutdown is due to an application error, the other requests will be fine.
 
 
 
-### Here it is:
+### Summing up:
 ## Our ideal server.
 
 ![unicorn](img/rainbow_unicorn.gif)
@@ -640,8 +649,7 @@ shutdown is due to an application error, the other requests will be fine.
 
 ## On startup:
 
-- OS process manager (e.g., Upstart) starts service.
-- Service brings up cluster master.
+- Cluster master comes up (for example, via Upstart).
 - Cluster master forks workers from symlink.
 - Each worker's server starts accepting connections.
 
@@ -652,7 +660,7 @@ shutdown is due to an application error, the other requests will be fine.
 - Send signal to cluster master.
 - Master tells existing workers to stop accepting new connections.
 - Master forks new workers from new code.
-- Existing workers shutdown gracefully.
+- Existing workers shut down gracefully.
 
 Note: master never stops. There are always workers accepting new connections.
 Workers close out existing connections before dying.
@@ -721,14 +729,13 @@ First, log the error so you know what happened.
 ### with minimal trouble.
 
 
-## On uncaught exception,
-## shutdown gracefully:
+## On uncaught exception:
 
-- Log the error.
+- Log error.
 - Server stops accepting new connections.
-- Worker tells cluster master "no more new connections"
+- Worker tells cluster master it's done.
 - Master forks a replacement worker.
-- Worker exits when all connections are closed, or after timeout.
+- Worker exits gracefully when all connections are closed, or after timeout.
 
 Note: Similar to what we have seen for deploy, except that this time, the worker
 tells the master it is going down.
@@ -828,10 +835,8 @@ I've been talking about:
 For example, cluster module has some changes.
 
 
-
 ## Cluster is 'experimental'.
 ## Domains are 'unstable'.
-Zero downtime means working with unstable or experimental parts of Node!
 
 <img src='img/volcano.jpg' style="width: 600px;">
 
@@ -865,4 +870,5 @@ If you thought this was interesting,
 ## Thanks!
 
 * @williamjohnbert
-* github.com/sandinmyjoints/towards-100-pct-uptime
+* [github.com/sandinmyjoints/towards-100-pct-uptime](http://github.com/sandinmyjoints/towards-100-pct-uptime)
+* [github.com/sandinmyjoints/towards-100-pct-uptime-examples](http://github.com/sandinmyjoints/towards-100-pct-uptime-examples)
