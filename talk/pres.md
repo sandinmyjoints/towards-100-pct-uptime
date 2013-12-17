@@ -18,11 +18,11 @@ entirely. :)
 
 <img src='img/sd-logo.png' alt="SpanishDict" style="width: 500px; height: 85px">
 
-### 9M uniques / month.
+## 9M uniques / month.
 <br>
 ![Fluencia](img/fluencia-logo.jpg)
 
-### 75K+ users, some are paid subscribers.
+## 75K+ users, some are paid subscribers.
 
 Note: About me: I'm a Software Engineer, one of three, at Curiosity Media.
 
@@ -42,29 +42,25 @@ We want both to run all the time, every day. Both run Node.js on the backend.
 
 Note: Downtime is bad for all sorts of reasons.
 
-Users go away.
+**Users go away**.
 
-You might get paged in the middle of the night.
+You **might get paged** in the middle of the night.
 
-If you know that deploying code can cause a bad experience for users who
-are online, or cause system errors or corrupted data, you won't deploy as
-much.
-
+If you know that deploying code can cause a bad experience for users who are
+online, or cause system errors or corrupted data, you **won't deploy as much**.
 
 
-### Important, but
+
+## Important, but
 ## out of scope:
 
 * Redundant infrastructure.
 * Backups.
 * Disaster recovery.
 
-Note: Lots of things can cause downtime.
-Database.
-Network.
-Imperfect engineers (e.g., me).
-Lots of factors needed to prevent it in entirely. Some of them are out of scope
-for this presentation.
+Note: Lots of things can cause downtime. Database. Network. **Lots of factors
+needed** to prevent it in entirely. Some of them are out of scope for this
+presentation.
 
 
 ## In scope:
@@ -76,7 +72,9 @@ for this presentation.
   * Cluster.
   * Express.
 
-Note: Without further ado, here are the...
+Note: Imperfect engineers (e.g., me) cause application errors. Deploys are a
+necessary evil. So we'll **focus on what we can do with Node** to keep these
+from causing downtime. Without further ado, here are the...
 
 
 
@@ -91,7 +89,7 @@ Note: Without further ado, here are the...
 
 
 ## 2. Use domains
-## to contain errors.
+## to catch and contain errors.
 ![no downtime](img/no-platform-downtime.jpg)
 
 
@@ -138,16 +136,17 @@ do?
 
 ![dead process](img/dead-smiley.png)
 
+Note: That's it, Node is dead, not running anymore.
+
 
 ## If the process is a server: ![no response](img/no-response.png)
 <h2 style="position: relative; top: -70px"> x 100s??</h2>
 
-Note: This process might be a server handling many requests from many clients
-when it crashes. This is an even scarier type of downtime than the screen we saw
-before: for any given client, a single response fails -- so for a single server,
-this could be happening for 100s or 1000s of clients if the uncaught exception
-is handled poorly and the process crashes. **The question is**, how to recover
-from this and continue as well as possible?
+Note: An **even scarier** type of downtime than the screen we saw before: for
+any given client, a single response fails -- so for a server, this could be
+happening for 100s or 1000s of clients if the uncaught exception was **handled
+poorly** and the process crashed hard. **The question is**, how to recover from
+this and continue as well as possible?
 
 
 ## It starts with...
@@ -155,7 +154,7 @@ from this and continue as well as possible?
 
 
 ## Domains.
-#### 2. Use domains to contain errors.
+#### 2. Use domains to catch and contain errors.
 
 
 ## `try/catch` doesn't do async.
@@ -186,7 +185,7 @@ var f = d.bind(function() {
   throw new Error("uh-oh");
 });
 
-setTimeout(f, 1000);
+setTimeout(f, 100);
 ```
 
 Note: Try / catch won't help. Wrap async operations in a domain, and the domain
@@ -225,9 +224,10 @@ EventEmitter.prototype.emit = function(type) {
 
 Note: We don't just use timers -- most IO in Node happens through EEs. If a
 domain is active when an EE is created, it will associate itself with that
-domain. What does that mean? If the EE has an associated domain, the error will
-be emitted on the domain instead of thrown. This right here can prevent a whole
-bunch of uncaught exceptions, thus saving your server processes.
+domain. What does that mean? It's like magically adding error listeners to a
+bunch of EEs. If an EE has an associated domain, the error will be emitted on
+the domain instead of thrown. This can prevent a whole bunch of uncaught
+exceptions, thus saving countless server processes.
 
 What to do once you've caught an error?
 You've caught an error with your domain (TODO: image of catching a fish)
@@ -241,8 +241,8 @@ You've caught an error with your domain (TODO: image of catching a fish)
 * `error.domainBound`
 * `error.domainThrown`
 
-Note: Probably want to log the error. Here are some extra fields on an error caught by a domain.
-Maybe useful for tracing errors and debugging.
+Note: Probably want to log the error. Errors caught by have extra fields that
+provide context that may be useful for tracing errors and debugging.
 
 
 ### Then it's up to you.
@@ -253,11 +253,12 @@ Maybe useful for tracing errors and debugging.
 * Throw (becomes an unknown error).
 
 Note: it's up to you depending on context: what kind of error, what is emitting
-the error, what your application is doing... No general answer.
+the error, what your application is doing... No general answer. Domains are a
+tool, not an answer.
 
 
-### Do I have to create a new domain every
-### time I do an async operation?
+### Do I have to create a new domain
+### every time I do an async operation?
 
 Note: Like every time I handle a request / response cycle?
 Not necessarily. Can group related operations. For example...
@@ -293,14 +294,15 @@ https://github.com/brianc/node-domain-middleware
 https://github.com/mathrawka/express-domain-errors
 </small>
 
-Note: Let's step through this.
-req and res are both EEs. They were created before this domain existed, but
-EEs can be explicitly added to a domain.
+Note: Let's step through this. req and res are both EEs. They were created
+before this domain existed, so must can be explicitly added to a domain.
+
+We add an error handler. On error, we'll just return 500. Alternatively, you
+could trigger yourerror handling middleware.
+
 Then we run the rest of the req / res stack through the context of the domain,
-and when new EEs are created, they add themselves to the active domain.
-When any EE emits an error, it propagates to the domain associated with that EE.
-This middleware triggers error handling middlewarwe. Alternatively, you could just send a response
-like 500.
+and when new EEs are created, they add themselves to the active domain. When any
+EE emits an error, or an error is thrown, it propagates to this domain.
 
 
 
@@ -317,15 +319,13 @@ them?
 - If no IO or timers, probably no need to dispose.
 The intention of calling dispose is generally to prevent cascading errors when a critical part of
 the Domain context is found to be in an error state.
-- Tries to clean IO associated with the domain
+- Tries to clean up IO associated with the domain
 - Streams are aborted, ended, closed, and/or destroyed.
 - Timers are cleared.
-- Explicitly bound callbacks are no longer called.
 - Any error events that are raised as a result of this are ignored.
-- IO might still be performed.
-- to the highest degree possible, once a domain is disposed, further errors from the emitters in
-that set will be ignored. So, even if some remaining actions are still in flight, Node.js will not
-communicate further about them.
+- Node tries really hard to close everything down in this context.
+- Use of dispose is context-dependent. Investigate its effects and decide if you
+  need it.
 
 
 
@@ -337,13 +337,13 @@ Note: For example,
 
 
 
-### node-mongodb-native does not play well
-### with active domain.
+### node-mongodb-native does not
+### play well with active domain.
 
 ```js
-console.log(process.domain); // a domain
-UserModel.findOne(function(err, doc) {
-  console.log(process.domain); // undefined
+console.log(domain.active); // a domain
+AppModel.findOne(function(err, doc) {
+  console.log(domain.active); // undefined
   next();
 });
 ```
@@ -353,16 +353,19 @@ See https://github.com/LearnBoost/mongoose/pull/1337
 </small>
 
 Note:
-This is the lib that Mongoose is built around. Why this is is outside the scope
-of this and I don't have a good handle on it yet, but I'm trying to learn more.
+This is the lib that Mongoose is built around. Any errors thrown in this
+callback will not go to the domain because there effectively isn't one. Yikes.
+
+(skip) Why this is is outside the scope of this and I don't have a good handle on it
+yet, but I'm trying to learn more.
 
 
-### Use explicit binding.
+### Fix with explicit binding.
 
 ```js
-console.log(process.domain); // a domain
-AppModel.findOne(process.domain.bind(function(err, doc) {
-  console.log(process.domain); // still a domain
+console.log(domain.active); // a domain
+AppModel.findOne(domain.active.bind(function(err, doc) {
+  console.log(domain.active); // still a domain
   next();
 }));
 ```
@@ -373,29 +376,30 @@ be error-prone because you might miss one...
 
 
 ### What other operations don't play well
-### well with `process.domain`?
+### well with `domain.active`?
 
 Good question!
 
 Package authors could note this.
 
-Also, as we find them, let's note them.
+If you find one, let package author know.
 
-Note: I'm opening a ticket with node-mongodb-native to find out more about this
-particular case.
+Note: It is probably feasible for domains to work. I'm opening a ticket with
+node-mongodb-native to find out more about this particular case.
 
 
 
 ### Can 100% uptime be achieved
-### just using domains?
+### just by using domains?
 
 ## No.
 
-### Not if only one instance of your app is running.
+### Not if only one instance of your app
+### is running.
 
-Note: When that instance is down, or restarting, perhaps due to re-thrown or
-uncaught error or deploy/upgrade, it's unavailable. The time between
-when this process dies and its successor comes up? That's downtime.
+Note: When that instance is down, or restarting, perhaps due to re-thrown error
+or uncaught exception or deploy/upgrade, it's unavailable. The time between when
+this process dies and its successor comes up? That's downtime.
 
 This brings us to #3...
 
@@ -419,15 +423,18 @@ One process per CPU = cluster.
 
 * 1 master process forks `n` workers.
 * Master and workers communicate state via IPC.
-* When workers want to listen to a socket/server, master registers them for it.
+* When workers want to listen to a socket, master registers them for it.
 * Each new connection to socket is handed off to a worker.
 * No shared application state between workers.
 
-Note: TODO replace with image
+Note: IPC is inter-process communication: messages between process.
+
+TODO replace with image
 
 
 
-### What about when a worker isn't working anymore?
+### What about when a worker
+### isn't working anymore?
 
 ### Some coordination is needed.
 
@@ -437,6 +444,8 @@ Note: TODO replace with image
 2. Cluster master forks replacement.
 
 3. Worker dies.
+
+Note: TODO image of someone not working
 
 
 
@@ -448,12 +457,13 @@ Another use case for cluster:
 * Something must manage that = cluster master process.
 
 Note: Deploy is a bit like a deliberately induced error across all your workers.
+Except that you need to start new workers from a different codebase.
 
 
 
 ## Zero downtime deployment.
 
-* When master starts, point a symlink to worker code.
+* When master starts, give it a symlink to worker code.
 
 * After deploy new code, update symlink.
 
@@ -461,33 +471,32 @@ Note: Deploy is a bit like a deliberately induced error across all your workers.
 
 * Master tells old workers to shut down, forks new workers from new code.
 
-* Master process never stops running!
+* Master process never stops running.
 
 Note: Master process never stops, so the socket is continually open and never
-refuses connections.
+refuses connections. symlink is a "symbolic link": a pointer to a directory.
 
 
 ## Signals.
 A way to communicate with running processes.
 
-`SIGHUP`: cycle workers (some like `SIGUSR2`).
+`SIGHUP`: reload workers (some like `SIGUSR2`).
 
-`$ kill -s HUP <pid>`
-
-`$ service <node-service-name> reload`
+    $ kill -s HUP <pid>
+    $ service <node-service-name> reload
 
 
 
 ## Process management options.
 
 Note: You can write your own process management code with cluster, and it's
-educational. Getting the behavior correct for all worker states is great fun, or
+educational. Getting the behavior correct for all worker states is great fun. Or
 if you want to simplify your life, there are packages out there that will do it
 for you.
 
 
 ## Forever
-https://github.com/nodejitsu/forever
+[github.com/nodejitsu/forever](https://github.com/nodejitsu/forever)
 
 - Has been around...forever.
 - No cluster awareness &mdash; used on a single process.
@@ -496,7 +505,7 @@ https://github.com/nodejitsu/forever
 
 
 ## Naught
-https://github.com/superjoe30/naught
+[github.com/superjoe30/naught](https://github.com/superjoe30/naught)
 
 - Newer.
 - Cluster aware.
@@ -506,7 +515,7 @@ https://github.com/superjoe30/naught
 
 
 ## Recluster
-https://github.com/doxout/recluster
+[github.com/doxout/recluster](https://github.com/doxout/recluster)
 
 - Newer.
 - Cluster aware.
@@ -529,11 +538,11 @@ connections.
 
 
 
-#### I have been talking about
-#### starting / stopping workers
-#### as if it's atomic.
+### I have been talking about
+### starting / stopping workers
+### as if it's atomic.
 
-### It's not.
+## It's not.
 
 
 
@@ -542,16 +551,17 @@ connections.
 
 
 
-### Don't call `process.exit` right away!
+### Don't call `process.exit` too soon!
 
-### Give it a grace period to do clean up.
+### Give it a grace period to clean up.
 
 Note: `process.exit` is how you shut down a node process. When you want to shut
-down a server, you don't want to call `process.exit` right away!
+down a server, you don't want to call `process.exit` right away! This is what
+leads to the scenario we saw before where 100s of in-flight requests all failed.
 
 
-### When a server closes,
-### need to clean up:
+
+### Need to clean up:
 * In-flight requests.
 * HTTP keep-alive (open TCP) connections.
 
@@ -580,11 +590,11 @@ hook?
 
 
 
-## Call `server.close`.
+## 1. Call `server.close`.
 
 ```js
 var afterErrorHook = function(req, res, next) {
-  server.close(); // <-- close server
+  server.close(); // <-- ensure no new connections
   next();
 }
 ```
@@ -594,7 +604,7 @@ accepting new connections. Call it to ensure that this worker handles no more wo
 
 
 
-## Shut down keep-alive connections.
+## 2. Shut down keep-alive connections.
 
 ```js
 var afterErrorHook = function(req, res, next) {
@@ -617,14 +627,14 @@ Idea from https://github.com/mathrawka/express-graceful-exit
 
 Note: HTTP defaults to keep-alive which keeps the underyling TCP connection
 open. We want to close those TCP connections for our dying worker. So we set
-**global** app state that we are shutting down, and for every TCP connection, w
+**global** app state that we are shutting down, and for every TCP connection, we
 set the keepalive timeout to a minimal value -- so as soon there is any activity
 on that particular connection, it basically closes right away. This will
 decrease the number of existing connections over time.
 
 
 
-### Then call `process.exit`
+### 3. Then call `process.exit`
 ### in `server.close` callback.
 
 ```js
@@ -644,14 +654,13 @@ back once all existing connections are closed. So we put the call to
 ### Set a timer.
 If timeout period expires and server is still around, call `process.exit`.
 
-Note: This then becomes a hard shutdown for any clients still connected, but
-time is up and the worker just has to go. This whole idea of gracefully shutting
-down is all about "best efforts". If the server is in a bad state (e.g., db
-disconnected), bad things might happen to these in-flight requests that we are
-trying to finish out cleanly, too. But they would have anyway if you had just
-down a hard shutdown without trying to close cleanly. So might as well try it.
-Most likely, if the shutdown is due to an application error, the other requests
-will be fine.
+Note: Now it's hard shutdown, but **time is up** and the worker just has to go.
+Gracefully shutting down is all about **"best efforts"**. If the server is in a
+bad state (e.g., db disconnected), **bad things might happen** to these
+in-flight requests that we are trying to finish out cleanly, too. But **they
+would have anyway** if you had just down a hard shutdown without trying to close
+cleanly. So **might as well** try it. Most likely, if the shutdown is due to an
+application error, the other requests will be fine.
 
 
 
@@ -681,23 +690,23 @@ Note: master never stops. There are always workers accepting new connections.
 Workers close out existing connections before dying.
 
 
-## On known error:
+## On error:
 
 - Server catches it via domain.
 - Next action depends on you: retry? abort? rethrow? etc.
 
-Note: There is no catch-all action here: it really depends on your app and on
-what error you've got. Note that you can use contextual domains that catch
-errors from specific operations or groups of operations so you have a better
-sense of what kinds of errors are being handled by a particular domain.
+Note: Again, no catch-all action here: depends on your app and on what error
+you've got. Use contextual domains to isolate specific operations or groups of
+operations so you have a better sense of what kinds of errors are being handled
+by a particular domain.
 
 
 ## On uncaught exception:
 
 - ??
 
-The infamous "uncaughtException" event:
 ```js
+// The infamous "uncaughtException" event!
 process.on('uncaughtException', function(err) {
   // ??
 })
@@ -706,7 +715,7 @@ process.on('uncaughtException', function(err) {
 
 
 Back to where we started:
-## 1. Sensibly handle uncaught exceptions
+## 1. Sensibly handle uncaught exceptions.
 
 We have minimized these by using domains.
 
@@ -729,9 +738,10 @@ Node docs say not to keep running.
 > </footer>
 
 Note: This makes sense. By definition, you don't know what's going on, so
-there's no sure way to recover. This comes from Node not separating your
-application from the server. It doesn't run in a container like mod_php or
-mod_wsgi with Apache.
+there's no sure way to recover.
+
+This comes from Node **not separating your application from the server**. It
+**doesn't run in a container** like mod_php or mod_wsgi with Apache.
 
 
 ### What to do?
@@ -756,14 +766,16 @@ Note: (TODO: Old Yeller image??)
 - Master forks a replacement worker.
 - Worker exits gracefully when all connections are closed, or after timeout.
 
-Note: Similar to what we have seen for deploy, except that this time, the worker
-tells the master it is going down.
+Note: Similar to what we have seen for deploy, except reversed: the worker tells
+the master it is going down.
 
 
 
-### What about the request that killed the worker?
+### What about the request
+### that killed the worker?
 
-### How does the dying worker gracefully respond to it?
+### How does the dying worker
+### gracefully respond to it?
 
 ### Good question!
 
@@ -776,14 +788,15 @@ tells the master it is going down.
 > <small>-felixge, https://github.com/joyent/node/issues/2582</small>
 > </cite></footer>
 
-Note: Felix Geisendorfer, Node community member who originally added the
-uncaughtException handler, and has also asked for it to be removed
+Note: Felix Geisendorfer, Node community member who **originally added the
+uncaughtException handler**, and has also asked for it to be removed
 (unsuccessfully)!
 
 
 
-### This is too bad, because you want to
-### always return a response, even on error.
+### This is too bad, because you
+### always want to return a response,
+### even on error.
 
 Note: Keeping a client hanging can come back to bite you. 1) the user agent
 appears to hang and 2) it might resend the bad request once the connection
@@ -795,15 +808,14 @@ handling that we were doing.
 
 
 
-### This is "Towards 100% Uptime" because
-### these approaches don't guarantee responses
-### for every client.
+This is **Towards 100% Uptime** b/c these approaches don't guarantee response for
+every request.
 
-But we can get very close.
-
+### But we can get very close.
 
 
-### Fortunately, given what we've discussed,
+
+### Fortunately, given what we've seen,
 ### uncaughts shouldn't happen often.
 
 ### And when they do, only one
@@ -838,7 +850,7 @@ for sync, async, db errors, etc.
 
 
 #### Tip:
-### Keep master simple.
+### Keep cluster master simple.
 
 It needs to run for a long time without being updated.
 
@@ -859,18 +871,22 @@ I've been talking about:
 ```
 
 
-## The Future: Node 0.11 / 0.12
+## The Future:
+## Node 0.11 / 0.12
 For example, cluster module has some changes.
 
 
-## Cluster is 'experimental'.
-## Domains are 'unstable'.
+## Cluster is *experimental*.
+## Domains are *unstable*.
 
 <img src='img/volcano.jpg' style="width: 600px;">
 
-Note: Volcano not because you're going to get burned by Node, but the big island
+Note: These terms are defined in the node docs.
+
+Volcano not because you're going to get burned by Node, but the big island
 of Hawaii is mostly stable--thousands live there--but it is also still being
 created -- parts are unstable. Like Node. Best approached with caution, respect.
+
 
 
 ## Good reading:
