@@ -91,7 +91,7 @@ Note: Without further ado, here are the...
 
 
 ## 2. Use domains
-## to handle known errors.
+## to contain errors.
 ![no downtime](img/no-platform-downtime.jpg)
 
 
@@ -155,7 +155,7 @@ from this and continue as well as possible?
 
 
 ## Domains.
-#### 2. Use domains to handle known errors.
+#### 2. Use domains to contain errors.
 
 
 ## `try/catch` doesn't do async.
