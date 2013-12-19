@@ -566,8 +566,7 @@ leads to the scenario we saw before where 100s of in-flight requests all failed.
 * HTTP keep-alive (open TCP) connections.
 
 
-### How to clean up
-Revisiting our middleware from earlier:
+### Revisiting our middleware from earlier:
 
 ```js
 var domainWrapper = function(afterErrorHook) {
@@ -593,9 +592,8 @@ hook?
 ## 1. Call `server.close`.
 
 ```js
-var afterErrorHook = function(req, res, next) {
+var afterErrorHook = function(err) {
   server.close(); // <-- ensure no new connections
-  next();
 }
 ```
 
@@ -607,10 +605,9 @@ accepting new connections. Call it to ensure that this worker handles no more wo
 ## 2. Shut down keep-alive connections.
 
 ```js
-var afterErrorHook = function(req, res, next) {
+var afterErrorHook = function(err) {
   app.set("isShuttingDown", true); // <-- set state
   server.close();
-  next()
 }
 
 var shutdownMiddle = function(req, res, next) {
@@ -638,7 +635,7 @@ decrease the number of existing connections over time.
 ### in `server.close` callback.
 
 ```js
-var afterErrorHook = function(req, res, next) {
+var afterErrorHook = function(err) {
   app.set("isShuttingDown", true);
   server.close(function() {
     process.exit(1);  // <-- all clear to exit
